@@ -7,6 +7,6 @@ namespace Infractructure.DAL
     {
         public static void AddDbContext(this IServiceCollection services) =>
       services.AddDbContext<OkFruitCtx>(options =>
-          options.UseSqlServer("Data Source=.;Initial Catalog=OkFruitDb;Integrated Security=true;")); // will be created in web project root
+          options.UseSqlServer("Data Source=.;Initial Catalog=OkFruitDb;Integrated Security=true;"));
     }
 }

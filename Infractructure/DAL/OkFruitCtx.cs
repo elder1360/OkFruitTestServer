@@ -1,16 +1,12 @@
 ﻿using Core.Entities;
-using Core.Interfaces;
-using Infractructure.DAL.EfEntityConfigurations;
 using Infractructure.DAL.Extensions;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
-using System.Reflection.Metadata;
 
 namespace Infractructure.DAL
 {
     public class OkFruitCtx : DbContext
     {
-        
+
 
         public OkFruitCtx(DbContextOptions options) : base(options)
         {
@@ -24,7 +20,7 @@ namespace Infractructure.DAL
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(OkFruitCtx).Assembly);
-            modelBuilder.Seed();    
+            modelBuilder.Seed();
         }
     }
 }

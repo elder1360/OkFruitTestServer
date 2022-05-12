@@ -1,34 +1,69 @@
-﻿using Core.Entities;
+﻿using Core.Exceptions;
 using Infractructure.DAL;
 using Microsoft.EntityFrameworkCore;
-using static System.Net.Mime.MediaTypeNames;
+using OkFruitTestServer.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Configuration.AddCommandLine(args);
+builder.Logging.AddConsole().AddSimpleConsole(config =>
+{
+    config.SingleLine = true;
+    config.UseUtcTimestamp = true;
+});
+
+
 builder.Services.AddCors();
 builder.Services.AddDbContext();
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-
 app.UseHttpsRedirection();
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.ConfigureExceptionMiddleware();
+}
+
 
 
 app.UseCors(policy => policy.AllowAnyOrigin());
 
-using var scope = app.Services.CreateScope();
-var ctx = scope.ServiceProvider.GetRequiredService<OkFruitCtx>();
-app.MapGet("/Customers", () =>
+app.MapGet("/Customers", (OkFruitCtx ctx) =>
 {
-    return ctx.Customers.ToArray();
+    return ctx.Customers;
 });
 
-app.MapGet("/Purchase", (int? customerId) =>
+app.MapGet("/Purchase", (int? customerId, OkFruitCtx ctx) =>
 {
-    var result = ctx.Purchases.Include(p=>p.Product).Where(c => c.Id == customerId);
+    if (customerId is null) throw new BadRequestException("Customer Id cannot be null");
+    var customer = ctx.Customers?.Where(c => c.Id == customerId).ToList();
+    if (customer is null || !customer.Any())
+    {
+        throw new CustomerNotFoundException(customerId.Value);
+    }
+
+    var result = ctx.Purchases?.Include(p => p.Product).Include(p => p.Product.UnitType).Where(c => c.CustomerId == customerId);
     return result;
 });
 
+app.MapGet("/exception", () =>
+{
+    throw new Exception();
+});
 
+await ApplyMigrations(app.Services);
 app.Run();
+
+static async Task ApplyMigrations(IServiceProvider serviceProvider)
+{
+    using var scope = serviceProvider.CreateScope();
+
+    await using OkFruitCtx ctx = scope.ServiceProvider.GetRequiredService<OkFruitCtx>();
+
+    await ctx.Database.MigrateAsync();
+}
