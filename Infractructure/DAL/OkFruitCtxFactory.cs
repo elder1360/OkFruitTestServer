@@ -11,10 +11,12 @@ namespace Infractructure.DAL
 {
     public class OkFruitCtxFactory : IDesignTimeDbContextFactory<OkFruitCtx>
     {
+        private readonly IConfiguration _config;
+        public OkFruitCtxFactory(IConfiguration config) => _config = config;
         public OkFruitCtx CreateDbContext(string[] args)
 {
             var builder = new DbContextOptionsBuilder<OkFruitCtx>();
-            builder.UseSqlServer("Data Source=.;Initial Catalog=OkFruitDb;Integrated Security=true;").EnableSensitiveDataLogging();
+            builder.UseSqlServer(_config.GetConnectionString("OkFruitDb")).EnableSensitiveDataLogging();
             
             return new OkFruitCtx(builder.Options);
         }

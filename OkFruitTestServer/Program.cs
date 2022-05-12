@@ -1,5 +1,7 @@
 ﻿using Core.Exceptions;
+using Core.Interfaces;
 using Infractructure.DAL;
+using Infractructure.Repositories.Extensions;
 using Microsoft.EntityFrameworkCore;
 using OkFruitTestServer.Extensions;
 
@@ -14,7 +16,8 @@ builder.Logging.AddConsole().AddSimpleConsole(config =>
 
 
 builder.Services.AddCors();
-builder.Services.AddDbContext();
+builder.Services.AddDbContext(builder.Configuration);
+builder.Services.ConfigureRepositoryWrapper();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
@@ -26,34 +29,29 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.ConfigureExceptionMiddleware();
+    app.ConfigureExceptionMiddleware(app.Logger);
 }
 
 
 
 app.UseCors(policy => policy.AllowAnyOrigin());
 
-app.MapGet("/Customers", (OkFruitCtx ctx) =>
+app.MapGet("/Customers", (IRepositoryWrapper repo) =>
 {
-    return ctx.Customers;
+    return repo.Customer.GetAll();
 });
 
-app.MapGet("/Purchase", (int? customerId, OkFruitCtx ctx) =>
+app.MapGet("/Purchase", (int? customerId, IRepositoryWrapper repo) =>
 {
     if (customerId is null) throw new BadRequestException("Customer Id cannot be null");
-    var customer = ctx.Customers?.Where(c => c.Id == customerId).ToList();
+    var customer = repo.Customer.GetByCondition(c => c.Id == customerId).ToList();
     if (customer is null || !customer.Any())
     {
         throw new CustomerNotFoundException(customerId.Value);
     }
 
-    var result = ctx.Purchases?.Include(p => p.Product).Include(p => p.Product.UnitType).Where(c => c.CustomerId == customerId);
+    var result = repo.Puchase.GetByCondition(c => c.CustomerId == customerId).Include(c=>c.Product).Include(c=>c.Product.UnitType);
     return result;
-});
-
-app.MapGet("/exception", () =>
-{
-    throw new Exception();
 });
 
 await ApplyMigrations(app.Services);
